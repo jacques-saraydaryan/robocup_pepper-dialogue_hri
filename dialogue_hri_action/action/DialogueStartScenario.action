@@ -1,6 +1,0 @@
-string signal_to_emit
----
-int32 result
----
-#feedback
-int32 feedback

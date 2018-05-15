@@ -16,7 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate actions in the 'action' folder
  add_action_files(
    FILES
-   DialogueStartScenario.action
+   #DialogueStartScenario.action
    DialogueSendSignal.action
  )
 

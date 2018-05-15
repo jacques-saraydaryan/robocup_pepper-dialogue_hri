@@ -4,39 +4,46 @@ import qi
 import argparse
 import sys
 import time
+from threading import Timer
 import rospy
 from collections import namedtuple
 import json
 import actionlib
+from actionlib_msgs.msg import GoalID
 from robocup_msgs.msg import gm_bus_msg
-from dialogue_hri_actions.msg import DialogueSendSignalAction,DialogueStartScenarioAction
+from dialogue_hri_actions.msg import DialogueSendSignalAction,DialogueSendSignalResult
+
 
 ######### Command to Test
 ## 
-## rostopic pub /gm_bus_command robocup_msgs/gm_b_msg "{'action': 'TTS', 'action_id': '1', 'payload': '{\"txt\":\"I am alive, test for pepper TTS of HRI module\",\"lang\":\"English\", \"mode\":\"NO_WAIT_END\"}' , 'result': 0}"
+## 
 #########
 
 
 class DialogueHri:
-    TTS_ACTION="TTS"
+    _maxWaitTimePerCall=40.0
     NO_WAIT_END_MODE="NO_WAIT_END"
     WAIT_END_MODE="WAIT_END"
-    WAIT_END_STATUS="WAIT_END_STATUS"
+    WAIT_SIGNAL_STATUS="WAIT_SIGNAL"
+    RECEIVED_SIGNAL_STATUS="RECEIVED_SIGNA"
     NONE_STATUS="NONE_STATUS"
     _status=NONE_STATUS
-    _currentOrder=None
+    _currentSignalSubscriber=None
+    _currentSignalSubName=None
+    _is_current_result_succeed=False
+    _current_result_value=None
     _session=None
     _memory=None
-    _tts=None
-    _maxWaitTimePerCall=60
-    _timeout_checker=False
+
     _t_timer=''
     def __init__(self,ip,port):
         self._ip=ip
         self._port=port
-        while not self.configureNaoqi() and not not rospy.is_shutdown():
+        while not self.configureNaoqi() and not rospy.is_shutdown():
             rospy.sleep(0.5)
         self.configure()
+
+        rospy.loginfo("DIALOGUE: READY TO PROCESS ACTION")
 
     def configureNaoqi(self):
         self._session = qi.Session()
@@ -46,120 +53,161 @@ class DialogueHri:
             rospy.logerr("Can't connect to Naoqi at ip \"" + ip + "\" on port " + str(port) +".\n"
                    "Please check your script arguments. Run with -h option for help.")
             return False
-
-
         self._memory = self._session.service("ALMemory")
-
-
-        self.subscriber2 = self._memory.subscriber("ALTextToSpeech/Status")
-        self.subscriber2.signal.connect(self.onTextStatus)
+        rospy.loginfo("DIALOGUE: CONFIGURATION NAOQI OK")
         return True
 
     def configure(self):
-        
-
         # create action server and start it
-        self._actionStartServer = actionlib.SimpleActionServer('dialogue_hri_start', DialogueStartScenarioAction, self.executeDialogueStartActionServer, False)
-        self._actionStartServer.start()
+        
+        #self._actionStartServer = actionlib.SimpleActionServer('dialogue_hri_start', DialogueStartScenarioAction, self.executeDialogueStartActionServer, False)
+        #self._actionStartServer.start()
 
-        self._actionSignalServer = actionlib.SimpleActionServer('dialogue_hri_signal', DialogueSendSignalAction, self.executeDialogueSignalActionServer, False)
-        self._actionSignalServer.start()
+        self._actionServer = actionlib.SimpleActionServer('dialogue_hri_signal', DialogueSendSignalAction, self.executeDialogueSignalActionServer, False)
+        self._actionServer.start()
 
         self._status=self.NONE_STATUS
 
+        self._action_cancel_sub = rospy.Subscriber("/dialogue_hri_signal/cancel", GoalID, self.cancelOrder)
+
+        rospy.loginfo("DIALOGUE: CONFIGURATION ACTION OK")
+
   
              
-    def onTextStatus(self,status):
-        print str(status)+'\n'
-        if self._status==self.WAIT_END_STATUS:
-             if status[1]=='done':
-                self._currentOrder.result=3
-                rospy.loginfo("TTS: text Done")
-                self._gm_bus_pub.publish(self._currentOrder)
-                self._status=self.NONE_STATUS
-                self._currentOrder=None
-
-    def processPayload(self,payload):
-        try:
-            #rospy.logwarn("payload: %s",str(payload))
-            jsonObject = json.loads(payload, object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
-            #rospy.logwarn("jsonObject: %s",str(jsonObject))
-            jsonObject.txt
-            jsonObject.mode
-            jsonObject.lang
-            #rospy.logwarn("Object ready txt:%s",str(jsonObject.txt))
-            return jsonObject
-        except Exception as e:
-            rospy.logwarn("Unable to load TTS payload: %s" % e)
-            return None
+    def onSignalCallback(self,status):
+        rospy.loginfo(" SIGNAL CALLBACK: "+str(status))
+        #FIXME check that feedback are tab
+        if status==0:
+            self._is_current_result_succeed=False
+            self._current_result_value=None
+        elif status==1:
+            self._is_current_result_succeed=True
+            self._current_result_value=None
+        else:
+            self._is_current_result_succeed=True
+            self._current_result_value=status
+             
+        self._status=self.RECEIVED_SIGNAL_STATUS
+        
+    #def processPayload(self,payload):
+    #    try:
+    #        #rospy.logwarn("payload: %s",str(payload))
+    #        jsonObject = json.loads(payload, object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
+    #        #rospy.logwarn("jsonObject: %s",str(jsonObject))
+    #        jsonObject.txt
+    #        jsonObject.mode
+    #        jsonObject.lang
+    #        #rospy.logwarn("Object ready txt:%s",str(jsonObject.txt))
+    #        return jsonObject
+    #    except Exception as e:
+    #        rospy.logwarn("Unable to load TTS payload: %s" % e)
+    #        return None
   
 
 
 
-    def executeDialogueStartActionServer(self, goal):
-        isActionSucceed=False
-        try:
-           
-            try :
-                #TODO SEND START SIGNAL
-                
-                isActionSucceed=True
-            except RuntimeError as e:
-                rospy.logwarn("Error occurs when sending signal:"+str(e))
-        except Exception as e:
-            rospy.logwarn("unable to find or launch function corresponding to the action %s:, error:[%s]",str(goal.action), str(e))
-        if isActionSucceed:
-            self._actionServer.set_succeeded()
-        else:
-            self._actionServer.set_aborted()
+    #def executeDialogueStartActionServer(self, goal):
+    #    isActionSucceed=False
+    #    try:
+    #        try :
+    #            #TODO SEND START SIGNAL
+    #            
+    #            isActionSucceed=True
+    #        except RuntimeError as e:
+    #            rospy.logwarn("Error occurs when sending signal:"+str(e))
+    #    except Exception as e:
+    #        rospy.logwarn("unable to find or launch function corresponding to the action %s:, error:[%s]",str(goal.action), str(e))
+    #    if isActionSucceed:
+    #        self._actionServer.set_succeeded()
+    #    else:
+    #        self._actionServer.set_aborted()
 
 
     def executeDialogueSignalActionServer(self, goal):
-        isActionSucceed=True
+        rospy.loginfo("DIALOGUE: Action received signal_to_emit:"+str(goal.signal_to_emit)+", signal_to_wait:"+str(goal.signal_to_wait))
+        isActionSucceed=False
+        waitMode=self.NO_WAIT_END_MODE
         try:
-            # call the process associating to the action
-            # caution msg is publish to the gm_answer... needed ??
-            
 
-            isWaitForResult=False
-            if self.WAIT_END_MODE == goal.mode:
-                isWaitForResult=True
+            #check if signal_to_wait is set
+            if goal.signal_to_wait != '':
+                #define new subscriber to signal from naoqi
+                self._currentSignalSubscriber = self._memory.subscriber(goal.signal_to_wait)
+                self._currentSignalSubscriber.signal.connect(self.onSignalCallback)
+                self._currentSignalSubName=goal.signal_to_wait
+                #need to wait signal before sending action end
+                waitMode=self.WAIT_END_MODE
 
-            #start text to speech
+            #start to emit signal
             try :
-                rospy.loginfo("TTS: text to say:%s",str(goal.txt))
-                if isWaitForResult:
-                    self._status=self.WAIT_END_STATUS
-                self._tts.say(goal.txt, goal.lang)
-            except RuntimeError:
-                rospy.logwarn(str(goal.lang)+" language is not installed, please install it to have a "+str(goal.lang)+" pronunciation.")
-                self._tts.say(goal.txt, "English")
-            if not isWaitForResult:
+                rospy.loginfo("DIALOGUE: emit on signal :%s",str(goal.signal_to_emit))
+                if self.WAIT_END_MODE == waitMode:
+                    self._status=self.WAIT_SIGNAL_STATUS
+
+                ##EMIt SIGNAL TO NAOQI
+                self._memory.raiseEvent(goal.signal_to_emit,1)
+
+                if self.NO_WAIT_END_MODE == waitMode:
+                     isActionSucceed=True
+                     self._is_current_result_succeed=True
+                else:
+                     # set a timer
+                     # check if event trigged if yes return success
+                     #self.timeout_checker=False
+                     #self._t_timer = Timer(self._maxWaitTimePerCall, self._timeout_checker_fct)
+                     #self._t_timer.start()
+                     #while not self.timeout_checker:
+                     #while self._status is self.WAIT_SIGNAL_STATUS and not self.timeout_checker and  not rospy.is_shutdown():
+                     while self._status is self.WAIT_SIGNAL_STATUS and  not rospy.is_shutdown():
+                         rospy.sleep(0.1)
+
+                     #if self.timeout_checker:
+                     #    #END of Internal Timeout
+                     #    isActionSucceed=False
+                     #else:
+                     #    #END of Internal Timeout
+                     #    isActionSucceed=True
                 isActionSucceed=True
-            else:
-                # set a timer
-                # check if event trigged if yes return success
-                self.timeout_checker=False
-                self._t_timer = Timer(_maxWaitTimePerCall, self._timeout_checker)
-                self._t_timer.start()
-                while not self.timeout_checker:
-                    rospy.sleep(0.1)
-                isActionSucceed=True
+            except RuntimeError as e:
+                rospy.logwarn("ERROR during sending signal:"+str(goal.signal_to_emit)+",e:"+str(e))
+            
+            #
+            
         except Exception as e:
-            rospy.logwarn("unable to find or launch function corresponding to the action %s:, error:[%s]",str(goal.action), str(e))
-        if isActionSucceed:
-            self._actionServer.set_succeeded()
+            rospy.logwarn("Error during SIgnal configuration process:, error:[%s]", str(e))
+            self._currentSignalSubName=None
+            self._currentSignalSubscriber=None
+
+
+        result=DialogueSendSignalResult()
+        if self._is_current_result_succeed:
+            result.result=3
+            if self._current_result_value!=None:
+                result.payload=self._current_result_value
         else:
-            self._actionServer.set_aborted()
+            result.result=4
+            isActionSucceed=False
+
+        if isActionSucceed:
+
+            self._actionServer.set_succeeded(result)
+        else:
+            self._actionServer.set_aborted(result)
+    
+    def _timeout_checker_fct(self):
+        self.timeout_checker=True
+
+    def cancelOrder(self,goalId):
+        self._status=self.NONE_STATUS
+        self._is_current_result_succeed=False
 
 
 
 if __name__ == "__main__":
     rospy.init_node('pepper_dialogue_hri')
-    ip=rospy.get_param('~ip',"192.168.0.147")
+    ip=rospy.get_param('~ip',"192.168.0.189")
     port=rospy.get_param('~port',9559)
    
-    
     DialogueHri(ip,port)
     rospy.spin()
 

@@ -7,7 +7,9 @@ project(dialogue_hri_node)
 find_package(catkin REQUIRED COMPONENTS 
   rospy 
   sensor_msgs 
-  std_msgs 
+  std_msgs
+  actionlib
+  actionlib_msgs 
   dialogue_hri_srvs
   
   )
