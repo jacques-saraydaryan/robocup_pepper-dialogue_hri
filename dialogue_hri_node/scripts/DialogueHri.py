@@ -11,8 +11,7 @@ import json
 import actionlib
 from actionlib_msgs.msg import GoalID
 from robocup_msgs.msg import gm_bus_msg
-from dialogue_hri_actions.msg import DialogueSendSignalAction,DialogueSendSignalResult
-
+from dialogue_hri_actions.msg import DialogueSendSignalAction,DialogueSendSignalResult,AddInMemoryAction, AddInMemoryResult
 
 ######### Command to Test
 ## 
@@ -63,8 +62,11 @@ class DialogueHri:
         #self._actionStartServer = actionlib.SimpleActionServer('dialogue_hri_start', DialogueStartScenarioAction, self.executeDialogueStartActionServer, False)
         #self._actionStartServer.start()
 
-        self._actionServer = actionlib.SimpleActionServer('dialogue_hri_signal', DialogueSendSignalAction, self.executeDialogueSignalActionServer, False)
-        self._actionServer.start()
+        self._actionServerDialogue = actionlib.SimpleActionServer('dialogue_hri_signal', DialogueSendSignalAction, self.executeDialogueSignalActionServer, False)
+        self._actionServerDialogue.start()
+
+        self._actionServerAddMemory = actionlib.SimpleActionServer('add_in_memory_action', AddInMemoryAction, self.executeAddInMemoryServer, False)
+        self._actionServerAddMemory.start()
 
         self._status=self.NONE_STATUS
 
@@ -121,7 +123,7 @@ class DialogueHri:
     #        self._actionServer.set_succeeded()
     #    else:
     #        self._actionServer.set_aborted()
-
+ 
 
     def executeDialogueSignalActionServer(self, goal):
         rospy.loginfo("DIALOGUE: Action received signal_to_emit:"+str(goal.signal_to_emit)+", signal_to_wait:"+str(goal.signal_to_wait))
@@ -177,8 +179,7 @@ class DialogueHri:
             rospy.logwarn("Error during SIgnal configuration process:, error:[%s]", str(e))
             self._currentSignalSubName=None
             self._currentSignalSubscriber=None
-
-
+        
         result=DialogueSendSignalResult()
         if self._is_current_result_succeed:
             result.result=3
@@ -190,9 +191,32 @@ class DialogueHri:
 
         if isActionSucceed:
 
-            self._actionServer.set_succeeded(result)
+            self._actionServerDialogue.set_succeeded(result)
         else:
-            self._actionServer.set_aborted(result)
+            self._actionServerDialogue.set_aborted(result)
+
+        
+
+
+    def executeAddInMemoryServer(self, goal):
+        rospy.loginfo("DIALOGUE: Action received Add to memmory action,location :"+str(goal.memory_location)+", payload:"+str(goal.payload))
+        isActionSucceed=False
+        try:
+            #FIXME TO DO
+            self._memory.insertData(goal.memory_location,goal.payload)
+            isActionSucceed=True
+        except Exception as e:
+            rospy.logwarn("ERROR during setting payload in memory:"+str(goal.memory_location)+",e:"+str(e))
+            self._currentSignalSubName=None
+            self._currentSignalSubscriber=None
+
+        result=AddInMemoryResult()
+        if isActionSucceed:
+            result.result=3
+            self._actionServerAddMemory.set_succeeded(result)
+        else:
+            result.result=4
+            self._actionServerAddMemory.set_aborted(result)
     
     def _timeout_checker_fct(self):
         self.timeout_checker=True
@@ -205,7 +229,7 @@ class DialogueHri:
 
 if __name__ == "__main__":
     rospy.init_node('pepper_dialogue_hri')
-    ip=rospy.get_param('~ip',"192.168.0.189")
+    ip=rospy.get_param('~ip',"127.0.0.1")
     port=rospy.get_param('~port',9559)
    
     DialogueHri(ip,port)

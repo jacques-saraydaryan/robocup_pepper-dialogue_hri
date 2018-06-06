@@ -18,6 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
    FILES
    #DialogueStartScenario.action
    DialogueSendSignal.action
+   AddInMemory.action
  )
 
  #Generate services in the 'srv' folder
