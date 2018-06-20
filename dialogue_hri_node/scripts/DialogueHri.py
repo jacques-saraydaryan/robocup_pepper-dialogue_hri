@@ -229,7 +229,7 @@ class DialogueHri:
 
 if __name__ == "__main__":
     rospy.init_node('pepper_dialogue_hri')
-    ip=rospy.get_param('~ip',"127.0.0.1")
+    ip=rospy.get_param('~ip',"192.168.1.190")
     port=rospy.get_param('~port',9559)
    
     DialogueHri(ip,port)

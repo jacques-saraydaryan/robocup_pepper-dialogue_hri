@@ -8,10 +8,12 @@ find_package(catkin REQUIRED COMPONENTS rospy sensor_msgs std_msgs tf dynamic_re
 
 
  #Generate services in the 'srv' folder
- #add_service_files(
- #  FILES
- #  TODO.srv
- #)
+ add_service_files(
+   FILES
+   MoveSound.srv
+   MoveTurn.srv
+   TakePicture.srv
+ )
 
 ## Generate added messages and services with any dependencies listed here
  generate_messages(
