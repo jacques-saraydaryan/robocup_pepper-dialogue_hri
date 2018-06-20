@@ -33,6 +33,7 @@ class MoveTurnRobot:
 
         rospy.loginfo("MoveSoundHri: READY TO PROCESS ACTION")
 
+
     def configureNaoqi(self):
         self._session = qi.Session()
         rospy.loginfo("MoveSoundHri: try connecting to robot...")

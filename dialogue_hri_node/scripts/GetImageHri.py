@@ -52,6 +52,7 @@ class TakeImage:
         array = naoImage[6]
         image_string = str(bytearray(array))
 
+
         try:
             # Create a PIL Image from our pixel array.
             #im = Image.fromstring("RGB", (imageWidth, imageHeight), image_string)

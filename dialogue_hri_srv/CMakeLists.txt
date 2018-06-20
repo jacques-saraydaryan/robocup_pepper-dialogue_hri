@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS rospy sensor_msgs std_msgs tf dynamic_re
    MoveSound.srv
    MoveTurn.srv
    TakePicture.srv
+   
  )
 
 ## Generate added messages and services with any dependencies listed here
