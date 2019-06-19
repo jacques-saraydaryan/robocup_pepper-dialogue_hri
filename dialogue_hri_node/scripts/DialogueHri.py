@@ -161,7 +161,13 @@ class DialogueHri:
                      #while not self.timeout_checker:
                      #while self._status is self.WAIT_SIGNAL_STATUS and not self.timeout_checker and  not rospy.is_shutdown():
                      while self._status is self.WAIT_SIGNAL_STATUS and  not rospy.is_shutdown():
-                         rospy.sleep(0.1)
+
+                        #check if another call is asked until the current one is not complet
+                        if self._actionServerDialogue.is_preempt_requested():
+                            rospy.loginfo('%s: Preempted-----------------------------------')
+                            self.cancelOrder(None)
+
+                        rospy.sleep(0.1)
 
                      #if self.timeout_checker:
                      #    #END of Internal Timeout
@@ -222,6 +228,7 @@ class DialogueHri:
         self.timeout_checker=True
 
     def cancelOrder(self,goalId):
+        rospy.logwarn("DIALOGUE: Cancel order asked on current action")
         self._status=self.NONE_STATUS
         self._is_current_result_succeed=False
 
@@ -229,7 +236,7 @@ class DialogueHri:
 
 if __name__ == "__main__":
     rospy.init_node('pepper_dialogue_hri')
-    ip=rospy.get_param('~ip',"192.168.1.190")
+    ip=rospy.get_param('~ip',"192.168.1.201")
     port=rospy.get_param('~port',9559)
    
     DialogueHri(ip,port)
