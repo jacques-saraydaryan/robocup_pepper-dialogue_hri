@@ -74,16 +74,18 @@ class MoveTurnRobot:
             names = ["RShoulderPitch","RShoulderRoll","RElbowRoll","RElbowYaw","RWristYaw"]
             name_hand="RHand"
             name_stiffness = ["RArm"]
-            angles = [req.turn_rad, -0.09, 0.26, -0.14, 1.74]
+            #angles = [req.turn_rad, -0.09, 0.26, -0.14, 1.74]-0.349066
+            angles = [req.turn_rad, -0.349066, 0.26, -0.14, 1.74]
         else:
             names = ["LShoulderPitch","LShoulderRoll","LElbowRoll","LElbowYaw","LWristYaw"]
             name_hand = "LHand"
             name_stiffness = ["LArm"]
-            angles = [req.turn_rad, -0.09, 0.26, 0.035, -1.17]
+            #angles = [req.turn_rad, -0.09, 0.26, 0.035, -1.17] 	
+            angles = [req.turn_rad, 0.349066, 0.26, 0.035, -1.17] 	
 
         self._motion.stiffnessInterpolation(name_stiffness, 1.0, 1.0)
 
-        times = [1.0,1.0,1.0,1.0,1.0,1.0]
+        times = [2.0,1.0,2.0,2.0,2.0,2.0]
         isAbsolute = True
         self._motion.angleInterpolation(names, angles, times, isAbsolute)
         self._motion.angleInterpolation(name_hand, 0.83, 1.0, True)
@@ -139,7 +141,7 @@ class MoveTurnRobot:
             name_stiffness = ["LArm"]
         # move arm at rest position
         angles = [1.6, 0]
-        times = [3.0, 3.0]
+        times = [1.0, 5.0]
         isAbsolute = True
         self._motion.angleInterpolation(name_angle, angles, times, isAbsolute)
         # set stiffness to 0.0
@@ -213,7 +215,7 @@ class MoveTurnRobot:
 
 if __name__ == "__main__":
     rospy.init_node('pepper_move_hri')
-    ip=rospy.get_param('~ip',"192.168.1.189")
+    ip=rospy.get_param('~ip',"192.168.42.221")
     port=rospy.get_param('~port',9559)
    
     MoveTurnRobot(ip,port)
