@@ -1,4 +1,4 @@
-#!/usr/bin/env python  
+#!/usr/bin/env python
 
 import qi
 import argparse
@@ -17,7 +17,7 @@ import threading
 
 
 ######### Command to Test
-## rosservice call /point_at "{x: 10.0, y: 10.0, z: 0.0, move_head: true, move_arm: true, pose_duration: 8.0}" 
+## rosservice call /point_at "{x: 10.0, y: 10.0, z: 0.0, move_head: true, move_arm: true, pose_duration: 8.0}"
 ## rosservice call /move_arm_hand "{arm_l_or_r: 'l',turn_rad: 0.0,stiffness: 0.8}"
 ## rosservice call /go_to_carry_pose "{arm_l_or_r:'l', keep_pose: true, stiffness: 0.8}"
 #########
@@ -80,8 +80,8 @@ class MoveTurnRobot:
             names = ["LShoulderPitch","LShoulderRoll","LElbowRoll","LElbowYaw","LWristYaw"]
             name_hand = "LHand"
             name_stiffness = ["LArm"]
-            #angles = [req.turn_rad, -0.09, 0.26, 0.035, -1.17] 	
-            angles = [req.turn_rad, 0.349066, 0.26, 0.035, -1.17] 	
+            #angles = [req.turn_rad, -0.09, 0.26, 0.035, -1.17]
+            angles = [req.turn_rad, 0.349066, 0.26, 0.035, -1.17]
 
         self._motion.stiffnessInterpolation(name_stiffness, 1.0, 1.0)
 
@@ -126,9 +126,12 @@ class MoveTurnRobot:
             #   - FractionMaxSpeed - a fraction.
             self._tracker_service.pointAt(name, [req.x, req.y, req.z],0, 0.7)
 
-            rospy.sleep(req.pose_duration)
-
-            self.releaseArm(isRightArm,0.6)
+            #Release if pose_duration is positive or equal to zero
+            if req.pose_duration > 0.0:
+                rospy.sleep(req.pose_duration)
+                self.releaseArm(isRightArm,0.6)
+            else:
+                rospy.logwarn("Pepper arm still pointing: call release_arms service with 0.6 stiffness to release")
         return []
 
     def releaseArm(self,isRightArm,stiffness):
@@ -217,7 +220,6 @@ if __name__ == "__main__":
     rospy.init_node('pepper_move_hri')
     ip=rospy.get_param('~ip',"192.168.42.221")
     port=rospy.get_param('~port',9559)
-   
+
     MoveTurnRobot(ip,port)
     rospy.spin()
-
