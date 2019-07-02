@@ -31,10 +31,10 @@ class TakeImage:
             rospy.logerr("Can't connect to Naoqi at ip \"" + self._ip + "\" on port " + str(self._port) +".\n"
                    "Please check your script arguments. Run with -h option for help.")
             return False
-        
+
         self._video_service = self._session.service("ALVideoDevice")
         # http://doc.aldebaran.com/2-5/family/pepper_technical/video_2D_pep_v18a.html#cameraresolution-ov5640
-        self._resolution = 4    # 2: VGA 3: 4*VGA 4:16*VGA 
+        self._resolution = 4    # 2: VGA 3: 4*VGA 4:16*VGA
         self._colorSpace = 11   # RGB
         self._videoClient = self._video_service.subscribe("python_client", self._resolution, self._colorSpace, 5)
         self._t0 = time.time()
@@ -47,7 +47,7 @@ class TakeImage:
         rospy.loginfo("TAKEPICTURE: CONFIGURATION ACTION OK")
 
     def takeImg(self,req):
-        
+
         naoImage = self._video_service.getImageRemote(self._videoClient)
         imageWidth = naoImage[0]
         imageHeight = naoImage[1]
@@ -61,14 +61,14 @@ class TakeImage:
             im = Image.frombytes("RGB", (imageWidth, imageHeight), image_string)
             # Save the image.
             im.save(req.picture_full_path, "PNG")
-            
+
             #Display the current given information very usefull
             #im.show()
         except Exception as e:
-            
+
             print(e)
-        
-        return
+
+        return []
 
     def shutdown(self):
         self._video_service.unsubscribe(self._videoClient)
@@ -78,7 +78,7 @@ if __name__ == "__main__":
     rospy.init_node('pepper_move_sound_hri')
     ip=rospy.get_param('~ip',"192.168.0.189")
     port=rospy.get_param('~port',9559)
-   
+
     takeImg=TakeImage(ip,port)
     rospy.spin()
     takeImg.shutdown()
