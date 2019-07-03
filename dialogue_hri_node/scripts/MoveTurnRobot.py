@@ -11,15 +11,24 @@ import json
 import actionlib
 from actionlib_msgs.msg import GoalID
 from robocup_msgs.msg import gm_bus_msg
-from dialogue_hri_srvs.srv import MoveTurn, MoveArmHand,PointAt,GoToCarryPose,ReleaseArms
+from dialogue_hri_srvs.srv import MoveTurn, MoveArmHand,PointAt,GoToCarryPose,ReleaseArms, TurnToInterestPoint
 from std_msgs.msg import Empty
 import threading
+
+from tf import TransformListener
+from robocup_msgs.msg import InterestPoint
+from geometry_msgs.msg import Pose
+import tf
+from math import atan2, fmod, pi, sqrt, fabs
+from copy import deepcopy
+from map_manager.srv import getitP_service
 
 
 ######### Command to Test
 ## rosservice call /point_at "{x: 10.0, y: 10.0, z: 0.0, move_head: true, move_arm: true, pose_duration: 8.0}"
 ## rosservice call /move_arm_hand "{arm_l_or_r: 'l',turn_rad: 0.0,stiffness: 0.8}"
 ## rosservice call /go_to_carry_pose "{arm_l_or_r:'l', keep_pose: true, stiffness: 0.8}"
+## rosservice call /turn_to_interest_point "{itP_label: 'KITCHEN_BIN_02'}"
 #########
 
 
@@ -33,6 +42,8 @@ class MoveTurnRobot:
         while not self.configureNaoqi() and not rospy.is_shutdown():
             rospy.sleep(0.5)
         self.configure()
+
+        self._conf_TurnToInterestPoint()
 
         rospy.loginfo("MoveHri: READY TO PROCESS ACTION")
 
@@ -59,6 +70,7 @@ class MoveTurnRobot:
         self._point_at_service = rospy.Service('point_at', PointAt, self.pointAt)
         self._go_to_carry_pose = rospy.Service('go_to_carry_pose', GoToCarryPose, self.gotoCarryPose)
         self._release_arms = rospy.Service('release_arms', ReleaseArms, self.releaseArmSrv)
+        self._turn_to_interest_point = rospy.Service('turn_to_interest_point', TurnToInterestPoint, self.turnToInterestPoint)
 
         rospy.loginfo("MoveHri: CONFIGURATION ACTION OK")
 
@@ -227,9 +239,125 @@ class MoveTurnRobot:
             self.isEnd = True
             self.keep_arm_pose_thread.join(100)
 
+
+
+
+
+    def turnToInterestPoint(self, req ):
+        """
+            Tourne le robot vers un interest point
+
+            param: label de l'interest point vers lequel le robot doit se tourner
+        """    
+
+        """ InterestPoint.msg
+
+            string label
+            geometry_msgs/Pose pose
+            int32 arm_position
+            float32 head_pitch
+            float32 head_yaw
+        """
+
+        resp = self._getPoint_service( req.itP_label )
+
+        
+
+        itP_x = resp.itP.pose.position.x
+        itP_y = resp.itP.pose.position.y
+
+        rospy.loginfo("[MoveTurnRobot] ASK turn to an interest point: %s " % str(req.itP_label) )
+        robot_pose = self._getRobotCurrentPose(0)
+ 
+        
+        dist, angle = self._computeDistAngle(itP_x, itP_y, robot_pose)
+        
+        self._motion.moveTo(0, 0, angle)
+
+        return angle
+
+
+
+
+    def _conf_TurnToInterestPoint(self):
+        self._tflistener = TransformListener()
+        self._getPoint_service = rospy.ServiceProxy('get_InterestPoint', getitP_service)
+
+
+
+
+    def _computeDistAngle(self, itP_x, itP_y, robot_pose):
+        """
+            Compute the euclidian distance to the target and the angle between robot orientation and its target
+            Return a tupple (distance, angle) with distance and angle to the target
+        """        
+        rob_x = robot_pose.position.x
+        rob_y = robot_pose.position.y
+        roll, pitch, rob_angle = tf.transformations.euler_from_quaternion( (    
+                                                                robot_pose.orientation.x,
+                                                                robot_pose.orientation.y,
+                                                                robot_pose.orientation.z,
+                                                                robot_pose.orientation.w,
+                                                            ) )
+        distCurTarget = sqrt(pow(itP_x - rob_x, 2) + pow(itP_y - rob_y, 2) )
+        angleCurTarget = atan2( itP_y - rob_y , itP_x - rob_x )
+        angle = self._shortestAngleDiff(angleCurTarget, rob_angle)    
+
+        return (distCurTarget, angle)
+
+
+
+
+    def _shortestAngleDiff(self, th1, th2):
+        """
+            Returns the shortest angle between 2 angles in the trigonometric circle
+        """ 
+        print('------------->-------------> th1: %s , th2: %s' %(th1 ,th2))
+        anglediff = fmod( (th1 - th2), 2*pi)        
+
+        if anglediff < 0.0:
+            if fabs(anglediff) > (2*pi + anglediff) :
+                anglediff = 2*pi + anglediff
+                
+        else:
+            if anglediff > fabs(anglediff - 2*pi) :
+                anglediff = anglediff - 2*pi
+
+        
+        return anglediff
+
+
+
+    def _getRobotCurrentPose(self,data):
+        rospy.loginfo("[MoveTurnRobot] ASK to get current robot pose")
+        now = rospy.Time.now()
+        self._tflistener.waitForTransform("/map", "base_footprint", now, rospy.Duration(2))
+        (trans, rot) = self._tflistener.lookupTransform("/map", "base_footprint", now)
+        robotPose = Pose()
+        robotPose.position.x = trans[0]
+        robotPose.position.y = trans[1]
+        robotPose.position.z = trans[2]
+
+        quaternion = (rot[0], rot[1], rot[2], rot[3])
+        euler = tf.transformations.euler_from_quaternion(quaternion)
+        roll = euler[0]
+        pitch = euler[1]
+        yaw = euler[2] + data
+        q = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
+        robotPose.orientation.x = q[0]
+        robotPose.orientation.y = q[1]
+        robotPose.orientation.z = q[2]
+        robotPose.orientation.w = q[3]
+
+        return robotPose
+
+
+
+
+
 if __name__ == "__main__":
     rospy.init_node('pepper_move_hri')
-    ip=rospy.get_param('~ip',"192.168.42.221")
+    ip=rospy.get_param('~ip',"192.168.42.200")
     port=rospy.get_param('~port',9559)
 
     MoveTurnRobot(ip,port)
