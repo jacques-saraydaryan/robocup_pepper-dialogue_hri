@@ -16,7 +16,8 @@ find_package(catkin REQUIRED COMPONENTS rospy sensor_msgs std_msgs tf dynamic_re
    MoveArmHand.srv
    MoveSound.srv
    MoveTurn.srv
-  TakePicture.srv
+   TakePicture.srv
+   TurnToInterestPoint.srv
    
  )
 
