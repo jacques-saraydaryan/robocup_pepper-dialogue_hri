@@ -111,7 +111,7 @@ class MoveTurnRobot:
                 name = name_stiffness[0]
                 isRightArm=False
             else:
-                name_stiffness = ["RArm"]
+                name_stiffgotoCarryPose2ness = ["RArm"]
                 name = name_stiffness[0]
                 isRightArm = True
 
@@ -157,6 +157,7 @@ class MoveTurnRobot:
         return []
 
 
+
     def gotoCarryPose(self, req):
         #FIXME provide a seconde carry pose close to the robot legs
         leftArmEnable = True
@@ -170,6 +171,11 @@ class MoveTurnRobot:
             self._motion.angleInterpolation("RElbowRoll", 1.48, 1.0, True)
             self._motion.angleInterpolation("RShoulderPitch",-0.47, 2.0, True)
             self._motion.angleInterpolation("RShoulderRoll", -0.09, 2.0, True)
+
+            self._motion.angleInterpolation("RShoulderPitch", -1.52, 2.0, True)
+            self._motion.angleInterpolation("RShoulderRoll", 0, 2.0, True)
+            self._motion.angleInterpolation("RElbowYaw",  0.96, 1.0, True)
+
             joint_names = ["RHand", "RWristYaw","RElbowYaw" "RElbowRoll", "RShoulderPitch", "RShoulderRoll"]
             joint_angles = [0.0, 1.73, 2.08, 1.48, -0.47, -0.09]
             rightArmEnable = False
@@ -184,6 +190,11 @@ class MoveTurnRobot:
             self._motion.angleInterpolation("LElbowRoll", -1.48, 1.0, True)
             self._motion.angleInterpolation("LShoulderPitch", -0.47, 2.0, True)
             self._motion.angleInterpolation("LShoulderRoll", -0.09, 2.0, True)
+
+            self._motion.angleInterpolation("LShoulderPitch", -1.52, 2.0, True)
+            self._motion.angleInterpolation("LShoulderRoll", 0, 2.0, True)
+            self._motion.angleInterpolation("LElbowYaw", - 0.96 , 1.0, True)
+
             joint_names=["LHand","LWristYaw","LElbowYaw","LElbowRoll","LShoulderPitch","LShoulderRoll"]
             joint_angles=[0.0,-1.73,-2.08,-1.48,-0.47,-0.09]
             leftArmEnable = False
