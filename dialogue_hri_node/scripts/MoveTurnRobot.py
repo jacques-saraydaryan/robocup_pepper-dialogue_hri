@@ -111,7 +111,7 @@ class MoveTurnRobot:
                 name = name_stiffness[0]
                 isRightArm=False
             else:
-                name_stiffgotoCarryPose2ness = ["RArm"]
+                name_stiffness = ["RArm"]
                 name = name_stiffness[0]
                 isRightArm = True
 
@@ -177,7 +177,7 @@ class MoveTurnRobot:
             #self._motion.angleInterpolation("RShoulderPitch", -1.52, 2.0, True)
             self._motion.angleInterpolation("RShoulderRoll", 0, 2.0, True)
             self._motion.angleInterpolation("RElbowYaw",  0.96, 1.0, True)
-            
+
 
             joint_names = ["RHand", "RWristYaw","RElbowYaw" "RElbowRoll", "RShoulderPitch", "RShoulderRoll"]
             joint_angles = [0.0, 1.73, 2.08, 1.48, -0.47, -0.09]
@@ -198,7 +198,7 @@ class MoveTurnRobot:
             self._motion.angleInterpolation(["LShoulderPitch","LWristYaw"], [-1.52,1.4137167], [2.0,1.0], True)
             self._motion.angleInterpolation("LShoulderRoll", 0, 2.0, True)
             self._motion.angleInterpolation("LElbowYaw", - 0.96 , 1.0, True)
-            
+
 
             joint_names=["LHand","LWristYaw","LElbowYaw","LElbowRoll","LShoulderPitch","LShoulderRoll"]
             joint_angles=[0.0,-1.73,-2.08,-1.48,-0.47,-0.09]
