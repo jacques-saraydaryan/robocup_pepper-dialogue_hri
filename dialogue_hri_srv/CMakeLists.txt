@@ -4,7 +4,7 @@ project(dialogue_hri_srvs)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS rospy sensor_msgs std_msgs tf dynamic_reconfigure)
+find_package(catkin REQUIRED COMPONENTS rospy sensor_msgs std_msgs tf dynamic_reconfigure robocup_msgs)
 
 
  #Generate services in the 'srv' folder
@@ -18,13 +18,14 @@ find_package(catkin REQUIRED COMPONENTS rospy sensor_msgs std_msgs tf dynamic_re
    MoveTurn.srv
    TakePicture.srv
    TurnToInterestPoint.srv
-   
+
  )
 
 ## Generate added messages and services with any dependencies listed here
  generate_messages(
    DEPENDENCIES
    std_msgs
+   robocup_msgs
  )
 
 catkin_package(
